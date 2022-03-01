@@ -12,7 +12,6 @@
 
 #include <cfloat>
 #include <cstdint>
-#include <cstring>
 
 #include <array>
 
@@ -29,63 +28,31 @@ typedef struct _GUID
     std::uint8_t Data4[8];
 } GUID;
 
-inline bool operator==(const GUID& lhs, const GUID& rhs) noexcept
+inline constexpr bool operator==(
+    const GUID& lhs,
+    const GUID& rhs) noexcept
 {
-    return std::memcmp(&lhs, &rhs, sizeof(GUID)) == 0;
+    return
+        lhs.Data1 == rhs.Data1 &&
+        lhs.Data2 == rhs.Data2 &&
+        lhs.Data3 == rhs.Data3 &&
+        lhs.Data4[0] == rhs.Data4[0] &&
+        lhs.Data4[1] == rhs.Data4[1] &&
+        lhs.Data4[2] == rhs.Data4[2] &&
+        lhs.Data4[3] == rhs.Data4[3] &&
+        lhs.Data4[4] == rhs.Data4[4] &&
+        lhs.Data4[5] == rhs.Data4[5] &&
+        lhs.Data4[6] == rhs.Data4[6] &&
+        lhs.Data4[7] == rhs.Data4[7];
 }
 
-inline bool operator!=(const GUID& lhs, const GUID& rhs) noexcept
+inline constexpr bool operator!=(
+    const GUID& lhs,
+    const GUID& rhs) noexcept
 {
     return !(lhs == rhs);
 }
 #endif // GUID_DEFINED
-
-
-extern const GUID DSPROPSETID_EAX_ReverbProperties;
-
-enum DSPROPERTY_EAX_REVERBPROPERTY : unsigned int
-{
-    DSPROPERTY_EAX_ALL,
-    DSPROPERTY_EAX_ENVIRONMENT,
-    DSPROPERTY_EAX_VOLUME,
-    DSPROPERTY_EAX_DECAYTIME,
-    DSPROPERTY_EAX_DAMPING,
-}; // DSPROPERTY_EAX_REVERBPROPERTY
-
-struct EAX_REVERBPROPERTIES
-{
-    unsigned long environment;
-    float fVolume;
-    float fDecayTime_sec;
-    float fDamping;
-}; // EAX_REVERBPROPERTIES
-
-inline bool operator==(const EAX_REVERBPROPERTIES& lhs, const EAX_REVERBPROPERTIES& rhs) noexcept
-{
-    return std::memcmp(&lhs, &rhs, sizeof(EAX_REVERBPROPERTIES)) == 0;
-}
-
-extern const GUID DSPROPSETID_EAXBUFFER_ReverbProperties;
-
-enum DSPROPERTY_EAXBUFFER_REVERBPROPERTY : unsigned int
-{
-    DSPROPERTY_EAXBUFFER_ALL,
-    DSPROPERTY_EAXBUFFER_REVERBMIX,
-}; // DSPROPERTY_EAXBUFFER_REVERBPROPERTY
-
-struct EAXBUFFER_REVERBPROPERTIES
-{
-    float fMix;
-};
-
-inline bool operator==(const EAXBUFFER_REVERBPROPERTIES& lhs, const EAXBUFFER_REVERBPROPERTIES& rhs) noexcept
-{
-    return lhs.fMix == rhs.fMix;
-}
-
-constexpr auto EAX_BUFFER_MINREVERBMIX = 0.0F;
-constexpr auto EAX_BUFFER_MAXREVERBMIX = 1.0F;
-constexpr auto EAX_REVERBMIX_USEDISTANCE = -1.0F;
 
 
 extern const GUID DSPROPSETID_EAX20_ListenerProperties;
@@ -204,11 +171,13 @@ struct EAXVECTOR
     float z;
 }; // EAXVECTOR
 
-inline bool operator==(const EAXVECTOR& lhs, const EAXVECTOR& rhs) noexcept
-{ return std::memcmp(&lhs, &rhs, sizeof(EAXVECTOR)) == 0; }
+bool operator==(
+    const EAXVECTOR& lhs,
+    const EAXVECTOR& rhs) noexcept;
 
-inline bool operator!=(const EAXVECTOR& lhs, const EAXVECTOR& rhs) noexcept
-{ return !(lhs == rhs); }
+bool operator!=(
+    const EAXVECTOR& lhs,
+    const EAXVECTOR& rhs) noexcept;
 
 
 extern const GUID EAXPROPERTYID_EAX40_Context;
@@ -778,12 +747,10 @@ enum :
     EAX_ENVIRONMENT_DIZZY,
     EAX_ENVIRONMENT_PSYCHOTIC,
 
-    EAX1_ENVIRONMENT_COUNT,
-
     // EAX30
-    EAX_ENVIRONMENT_UNDEFINED = EAX1_ENVIRONMENT_COUNT,
+    EAX_ENVIRONMENT_UNDEFINED,
 
-    EAX3_ENVIRONMENT_COUNT,
+    EAX_ENVIRONMENT_COUNT,
 };
 
 
@@ -853,10 +820,10 @@ bool operator!=(
     const EAXREVERBPROPERTIES& rhs) noexcept;
 
 
-constexpr auto EAXREVERB_MINENVIRONMENT = static_cast<unsigned long>(EAX_ENVIRONMENT_GENERIC);
-constexpr auto EAX1REVERB_MAXENVIRONMENT = static_cast<unsigned long>(EAX_ENVIRONMENT_PSYCHOTIC);
-constexpr auto EAX30REVERB_MAXENVIRONMENT = static_cast<unsigned long>(EAX_ENVIRONMENT_UNDEFINED);
-constexpr auto EAXREVERB_DEFAULTENVIRONMENT = static_cast<unsigned long>(EAX_ENVIRONMENT_GENERIC);
+constexpr auto EAXREVERB_MINENVIRONMENT = 0UL;
+constexpr auto EAX20REVERB_MAXENVIRONMENT = EAX_ENVIRONMENT_COUNT - 2UL;
+constexpr auto EAX30REVERB_MAXENVIRONMENT = EAX_ENVIRONMENT_COUNT - 1UL;
+constexpr auto EAXREVERB_DEFAULTENVIRONMENT = EAX_ENVIRONMENT_GENERIC;
 
 constexpr auto EAXREVERB_MINENVIRONMENTSIZE = 1.0F;
 constexpr auto EAXREVERB_MAXENVIRONMENTSIZE = 100.0F;
@@ -942,12 +909,6 @@ constexpr auto EAXREVERB_MINROOMROLLOFFFACTOR = 0.0F;
 constexpr auto EAXREVERB_MAXROOMROLLOFFFACTOR = 10.0F;
 constexpr auto EAXREVERB_DEFAULTROOMROLLOFFFACTOR = 0.0F;
 
-constexpr auto EAX1REVERB_MINVOLUME = 0.0F;
-constexpr auto EAX1REVERB_MAXVOLUME = 1.0F;
-
-constexpr auto EAX1REVERB_MINDAMPING = 0.0F;
-constexpr auto EAX1REVERB_MAXDAMPING = 2.0F;
-
 constexpr auto EAXREVERB_DEFAULTFLAGS =
     EAXREVERBFLAGS_DECAYTIMESCALE |
     EAXREVERBFLAGS_REFLECTIONSSCALE |
@@ -958,13 +919,13 @@ constexpr auto EAXREVERB_DEFAULTFLAGS =
 
 
 extern const EAXREVERBPROPERTIES EAXREVERB_PRESET_GENERIC;
-extern const EAXREVERBPROPERTIES EAXREVERB_PRESET_PADDEDCELL;
+extern const EAXREVERBPROPERTIES EAXREVERB_PRESET_PADDEDCEL;
 extern const EAXREVERBPROPERTIES EAXREVERB_PRESET_ROOM;
 extern const EAXREVERBPROPERTIES EAXREVERB_PRESET_BATHROOM;
 extern const EAXREVERBPROPERTIES EAXREVERB_PRESET_LIVINGROOM;
 extern const EAXREVERBPROPERTIES EAXREVERB_PRESET_STONEROOM;
 extern const EAXREVERBPROPERTIES EAXREVERB_PRESET_AUDITORIUM;
-extern const EAXREVERBPROPERTIES EAXREVERB_PRESET_CONCERTHALL;
+extern const EAXREVERBPROPERTIES EAXREVERB_PRESET_CONCERTHAL;
 extern const EAXREVERBPROPERTIES EAXREVERB_PRESET_CAVE;
 extern const EAXREVERBPROPERTIES EAXREVERB_PRESET_ARENA;
 extern const EAXREVERBPROPERTIES EAXREVERB_PRESET_HANGAR;
@@ -984,39 +945,9 @@ extern const EAXREVERBPROPERTIES EAXREVERB_PRESET_DRUGGED;
 extern const EAXREVERBPROPERTIES EAXREVERB_PRESET_DIZZY;
 extern const EAXREVERBPROPERTIES EAXREVERB_PRESET_PSYCHOTIC;
 
-using EaxReverbPresets = std::array<EAXREVERBPROPERTIES, EAX1_ENVIRONMENT_COUNT>;
+
+using EaxReverbPresets = std::array<EAXREVERBPROPERTIES, EAX_ENVIRONMENT_UNDEFINED>;
 extern const EaxReverbPresets EAXREVERB_PRESETS;
-
-
-extern const EAX_REVERBPROPERTIES EAX1REVERB_PRESET_GENERIC;
-extern const EAX_REVERBPROPERTIES EAX1REVERB_PRESET_PADDEDCELL;
-extern const EAX_REVERBPROPERTIES EAX1REVERB_PRESET_ROOM;
-extern const EAX_REVERBPROPERTIES EAX1REVERB_PRESET_BATHROOM;
-extern const EAX_REVERBPROPERTIES EAX1REVERB_PRESET_LIVINGROOM;
-extern const EAX_REVERBPROPERTIES EAX1REVERB_PRESET_STONEROOM;
-extern const EAX_REVERBPROPERTIES EAX1REVERB_PRESET_AUDITORIUM;
-extern const EAX_REVERBPROPERTIES EAX1REVERB_PRESET_CONCERTHAL;
-extern const EAX_REVERBPROPERTIES EAX1REVERB_PRESET_CAVE;
-extern const EAX_REVERBPROPERTIES EAX1REVERB_PRESET_ARENA;
-extern const EAX_REVERBPROPERTIES EAX1REVERB_PRESET_HANGAR;
-extern const EAX_REVERBPROPERTIES EAX1REVERB_PRESET_CARPETTEDHALLWAY;
-extern const EAX_REVERBPROPERTIES EAX1REVERB_PRESET_HALLWAY;
-extern const EAX_REVERBPROPERTIES EAX1REVERB_PRESET_STONECORRIDOR;
-extern const EAX_REVERBPROPERTIES EAX1REVERB_PRESET_ALLEY;
-extern const EAX_REVERBPROPERTIES EAX1REVERB_PRESET_FOREST;
-extern const EAX_REVERBPROPERTIES EAX1REVERB_PRESET_CITY;
-extern const EAX_REVERBPROPERTIES EAX1REVERB_PRESET_MOUNTAINS;
-extern const EAX_REVERBPROPERTIES EAX1REVERB_PRESET_QUARRY;
-extern const EAX_REVERBPROPERTIES EAX1REVERB_PRESET_PLAIN;
-extern const EAX_REVERBPROPERTIES EAX1REVERB_PRESET_PARKINGLOT;
-extern const EAX_REVERBPROPERTIES EAX1REVERB_PRESET_SEWERPIPE;
-extern const EAX_REVERBPROPERTIES EAX1REVERB_PRESET_UNDERWATER;
-extern const EAX_REVERBPROPERTIES EAX1REVERB_PRESET_DRUGGED;
-extern const EAX_REVERBPROPERTIES EAX1REVERB_PRESET_DIZZY;
-extern const EAX_REVERBPROPERTIES EAX1REVERB_PRESET_PSYCHOTIC;
-
-using Eax1ReverbPresets = std::array<EAX_REVERBPROPERTIES, EAX1_ENVIRONMENT_COUNT>;
-extern const Eax1ReverbPresets EAX1REVERB_PRESETS;
 
 
 // AGC Compressor Effect

@@ -1,0 +1,15 @@
+/LinuxData/Kickback/openal-soft/OpenALConsoleApp/OpenALConsoleApp/bin/Debug/net6.0/OpenALConsoleApp
+/LinuxData/Kickback/openal-soft/OpenALConsoleApp/OpenALConsoleApp/bin/Debug/net6.0/OpenALConsoleApp.deps.json
+/LinuxData/Kickback/openal-soft/OpenALConsoleApp/OpenALConsoleApp/bin/Debug/net6.0/OpenALConsoleApp.runtimeconfig.json
+/LinuxData/Kickback/openal-soft/OpenALConsoleApp/OpenALConsoleApp/bin/Debug/net6.0/OpenALConsoleApp.dll
+/LinuxData/Kickback/openal-soft/OpenALConsoleApp/OpenALConsoleApp/bin/Debug/net6.0/OpenALConsoleApp.pdb
+/LinuxData/Kickback/openal-soft/OpenALConsoleApp/OpenALConsoleApp/obj/Debug/net6.0/OpenALConsoleApp.csproj.AssemblyReference.cache
+/LinuxData/Kickback/openal-soft/OpenALConsoleApp/OpenALConsoleApp/obj/Debug/net6.0/OpenALConsoleApp.GeneratedMSBuildEditorConfig.editorconfig
+/LinuxData/Kickback/openal-soft/OpenALConsoleApp/OpenALConsoleApp/obj/Debug/net6.0/OpenALConsoleApp.AssemblyInfoInputs.cache
+/LinuxData/Kickback/openal-soft/OpenALConsoleApp/OpenALConsoleApp/obj/Debug/net6.0/OpenALConsoleApp.AssemblyInfo.cs
+/LinuxData/Kickback/openal-soft/OpenALConsoleApp/OpenALConsoleApp/obj/Debug/net6.0/OpenALConsoleApp.csproj.CoreCompileInputs.cache
+/LinuxData/Kickback/openal-soft/OpenALConsoleApp/OpenALConsoleApp/obj/Debug/net6.0/OpenALConsoleApp.dll
+/LinuxData/Kickback/openal-soft/OpenALConsoleApp/OpenALConsoleApp/obj/Debug/net6.0/refint/OpenALConsoleApp.dll
+/LinuxData/Kickback/openal-soft/OpenALConsoleApp/OpenALConsoleApp/obj/Debug/net6.0/OpenALConsoleApp.pdb
+/LinuxData/Kickback/openal-soft/OpenALConsoleApp/OpenALConsoleApp/obj/Debug/net6.0/OpenALConsoleApp.genruntimeconfig.cache
+/LinuxData/Kickback/openal-soft/OpenALConsoleApp/OpenALConsoleApp/obj/Debug/net6.0/ref/OpenALConsoleApp.dll

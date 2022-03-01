@@ -26,7 +26,7 @@ class EaxEaxCall
 public:
     EaxEaxCall(
         bool is_get,
-        const GUID& property_set_guid,
+        const GUID* property_set_id,
         ALuint property_id,
         ALuint property_source_id,
         ALvoid* property_buffer,
@@ -82,16 +82,17 @@ public:
 
 
 private:
-    const bool is_get_;
-    const bool is_deferred_;
+    bool is_get_;
+    bool is_deferred_;
     int version_;
     EaxFxSlotIndex fx_slot_index_;
     EaxEaxCallPropertySetId property_set_id_;
 
+    GUID property_set_guid_;
     ALuint property_id_;
-    const ALuint property_source_id_;
-    ALvoid*const property_buffer_;
-    const ALuint property_size_;
+    ALuint property_source_id_;
+    ALvoid* property_buffer_;
+    ALuint property_size_;
 
 
     [[noreturn]]

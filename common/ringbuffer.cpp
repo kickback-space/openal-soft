@@ -160,9 +160,9 @@ size_t RingBuffer::write(const void *src, size_t cnt) noexcept
 }
 
 
-auto RingBuffer::getReadVector() const noexcept -> DataPair
+ll_ringbuffer_data_pair RingBuffer::getReadVector() const noexcept
 {
-    DataPair ret;
+    ll_ringbuffer_data_pair ret;
 
     size_t w{mWritePtr.load(std::memory_order_acquire)};
     size_t r{mReadPtr.load(std::memory_order_acquire)};
@@ -192,9 +192,9 @@ auto RingBuffer::getReadVector() const noexcept -> DataPair
     return ret;
 }
 
-auto RingBuffer::getWriteVector() const noexcept -> DataPair
+ll_ringbuffer_data_pair RingBuffer::getWriteVector() const noexcept
 {
-    DataPair ret;
+    ll_ringbuffer_data_pair ret;
 
     size_t w{mWritePtr.load(std::memory_order_acquire)};
     size_t r{mReadPtr.load(std::memory_order_acquire) + mWriteSize - mSizeMask};

@@ -179,9 +179,6 @@ al::optional<std::string> load_ambdec_matrix(float (&gains)[MaxAmbiOrder+1],
 
 } // namespace
 
-AmbDecConf::~AmbDecConf() = default;
-
-
 al::optional<std::string> AmbDecConf::load(const char *fname) noexcept
 {
     al::ifstream f{fname};

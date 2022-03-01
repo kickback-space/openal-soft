@@ -114,6 +114,7 @@ void ALCcontext::setThreadContext(ALCcontext *context) noexcept
 ALCcontext::ALCcontext(al::intrusive_ptr<ALCdevice> device)
   : ContextBase{device.get()}, mALDevice{std::move(device)}
 {
+    mPropsDirty.test_and_clear(std::memory_order_relaxed);
 }
 
 ALCcontext::~ALCcontext()
@@ -257,10 +258,7 @@ void ALCcontext::applyAllUpdates()
         /* busy-wait */
     }
 
-#ifdef ALSOFT_EAX
-    eax_apply_deferred();
-#endif
-    if(std::exchange(mPropsDirty, false))
+    if(mPropsDirty.test_and_clear(std::memory_order_acq_rel))
         UpdateContextProps(this);
     UpdateAllEffectSlotProps(this);
     UpdateAllSourceProps(this);
@@ -287,23 +285,158 @@ public:
 }; // ContextException
 
 
-template<typename F>
-void ForEachSource(ALCcontext *context, F func)
-{
-    for(auto &sublist : context->mSourceList)
-    {
-        uint64_t usemask{~sublist.FreeMask};
-        while(usemask)
-        {
-            const int idx{al::countr_zero(usemask)};
-            usemask &= ~(1_u64 << idx);
+} // namespace
 
-            func(sublist.Sources[idx]);
+
+ALCcontext::SourceListIterator::SourceListIterator(
+    SourceList& sources,
+    SourceListIteratorBeginTag) noexcept
+    :
+    sub_list_iterator_{sources.begin()},
+    sub_list_end_iterator_{sources.end()},
+    sub_list_item_index_{}
+{
+    // Search for first non-free item.
+    //
+    while (true)
+    {
+        if (sub_list_iterator_ == sub_list_end_iterator_)
+        {
+            // End of list.
+
+            sub_list_item_index_ = 0;
+            return;
         }
+
+        if ((~sub_list_iterator_->FreeMask) == 0_u64)
+        {
+            // All sub-list's items are free.
+
+            ++sub_list_iterator_;
+            sub_list_item_index_ = 0;
+            continue;
+        }
+
+        if (sub_list_item_index_ >= 64_u64)
+        {
+            // Sub-list item's index beyond the last one.
+
+            ++sub_list_iterator_;
+            sub_list_item_index_ = 0;
+            continue;
+        }
+
+        if ((sub_list_iterator_->FreeMask & (1_u64 << sub_list_item_index_)) == 0_u64)
+        {
+            // Found non-free item.
+
+            break;
+        }
+
+        sub_list_item_index_ += 1;
     }
 }
 
-} // namespace
+ALCcontext::SourceListIterator::SourceListIterator(
+    SourceList& sources,
+    SourceListIteratorEndTag) noexcept
+    :
+    sub_list_iterator_{sources.end()},
+    sub_list_end_iterator_{sources.end()},
+    sub_list_item_index_{}
+{
+}
+
+ALCcontext::SourceListIterator::SourceListIterator(
+    const SourceListIterator& rhs)
+    :
+    sub_list_iterator_{rhs.sub_list_iterator_},
+    sub_list_end_iterator_{rhs.sub_list_end_iterator_},
+    sub_list_item_index_{rhs.sub_list_item_index_}
+{
+}
+
+ALCcontext::SourceListIterator& ALCcontext::SourceListIterator::operator++()
+{
+    while (true)
+    {
+        if (sub_list_iterator_ == sub_list_end_iterator_)
+        {
+            // End of list.
+
+            sub_list_item_index_ = 0;
+            break;
+        }
+
+        if ((~sub_list_iterator_->FreeMask) == 0_u64)
+        {
+            // All sub-list's items are free.
+
+            ++sub_list_iterator_;
+            sub_list_item_index_ = 0;
+            continue;
+        }
+
+        sub_list_item_index_ += 1;
+
+        if (sub_list_item_index_ >= 64_u64)
+        {
+            // Sub-list item's index beyond the last one.
+
+            ++sub_list_iterator_;
+            sub_list_item_index_ = 0;
+            continue;
+        }
+
+        if ((sub_list_iterator_->FreeMask & (1_u64 << sub_list_item_index_)) == 0_u64)
+        {
+            // Found non-free item.
+
+            break;
+        }
+    }
+
+    return *this;
+}
+
+ALsource& ALCcontext::SourceListIterator::operator*() noexcept
+{
+    assert(sub_list_iterator_ != sub_list_end_iterator_);
+    return (*sub_list_iterator_).Sources[sub_list_item_index_];
+}
+
+bool ALCcontext::SourceListIterator::operator==(
+    const SourceListIterator& rhs) const noexcept
+{
+    return
+        sub_list_iterator_ == rhs.sub_list_iterator_ &&
+        sub_list_end_iterator_ == rhs.sub_list_end_iterator_ &&
+        sub_list_item_index_ == rhs.sub_list_item_index_;
+}
+
+bool ALCcontext::SourceListIterator::operator!=(
+    const SourceListIterator& rhs) const noexcept
+{
+    return !((*this) == rhs);
+}
+
+
+ALCcontext::SourceListEnumerator::SourceListEnumerator(
+    ALCcontext::SourceList& sources) noexcept
+    :
+    sources_{sources}
+{
+}
+
+ALCcontext::SourceListIterator ALCcontext::SourceListEnumerator::begin() noexcept
+{
+    return SourceListIterator{sources_, SourceListIteratorBeginTag{}};
+}
+
+ALCcontext::SourceListIterator ALCcontext::SourceListEnumerator::end() noexcept
+{
+    return SourceListIterator{sources_, SourceListIteratorEndTag{}};
+}
 
 
 bool ALCcontext::eax_is_capable() const noexcept
@@ -333,11 +466,10 @@ ALenum ALCcontext::eax_eax_set(
 {
     eax_initialize();
 
-    constexpr auto deferred_flag = 0x80000000u;
     const auto eax_call = create_eax_call(
         false,
         property_set_id,
-        property_id | (mDeferUpdates ? deferred_flag : 0u),
+        property_id,
         property_source_id,
         property_value,
         property_value_size
@@ -411,13 +543,24 @@ ALenum ALCcontext::eax_eax_get(
 
 void ALCcontext::eax_update_filters()
 {
-    ForEachSource(this, std::mem_fn(&ALsource::eax_update_filters));
+    for (auto& source : SourceListEnumerator{mSourceList})
+    {
+        source.eax_update_filters();
+    }
+}
+
+void ALCcontext::eax_commit_sources()
+{
+    std::unique_lock<std::mutex> source_lock{mSourceLock};
+    for (auto& source : SourceListEnumerator{mSourceList})
+        source.eax_commit();
 }
 
 void ALCcontext::eax_commit_and_update_sources()
 {
     std::unique_lock<std::mutex> source_lock{mSourceLock};
-    ForEachSource(this, std::mem_fn(&ALsource::eax_commit_and_update));
+    for (auto& source : SourceListEnumerator{mSourceList})
+        source.eax_commit_and_update();
 }
 
 void ALCcontext::eax_set_last_error() noexcept
@@ -441,11 +584,11 @@ void ALCcontext::eax_initialize_extensions()
 
     const auto string_max_capacity =
         std::strlen(mExtensionList) + 1 +
-        std::strlen(eax1_ext_name) + 1 +
-        std::strlen(eax2_ext_name) + 1 +
-        std::strlen(eax3_ext_name) + 1 +
-        std::strlen(eax4_ext_name) + 1 +
-        std::strlen(eax5_ext_name) + 1 +
+        std::strlen(eax_v2_0_ext_name_1) + 1 +
+        std::strlen(eax_v2_0_ext_name_2) + 1 +
+        std::strlen(eax_v3_0_ext_name) + 1 +
+        std::strlen(eax_v4_0_ext_name) + 1 +
+        std::strlen(eax_v5_0_ext_name) + 1 +
         std::strlen(eax_x_ram_ext_name) + 1 +
         0;
 
@@ -453,19 +596,19 @@ void ALCcontext::eax_initialize_extensions()
 
     if (eax_is_capable())
     {
-        eax_extension_list_ += eax1_ext_name;
+        eax_extension_list_ += eax_v2_0_ext_name_1;
         eax_extension_list_ += ' ';
 
-        eax_extension_list_ += eax2_ext_name;
+        eax_extension_list_ += eax_v2_0_ext_name_2;
         eax_extension_list_ += ' ';
 
-        eax_extension_list_ += eax3_ext_name;
+        eax_extension_list_ += eax_v3_0_ext_name;
         eax_extension_list_ += ' ';
 
-        eax_extension_list_ += eax4_ext_name;
+        eax_extension_list_ += eax_v4_0_ext_name;
         eax_extension_list_ += ' ';
 
-        eax_extension_list_ += eax5_ext_name;
+        eax_extension_list_ += eax_v5_0_ext_name;
         eax_extension_list_ += ' ';
     }
 
@@ -496,6 +639,7 @@ void ALCcontext::eax_initialize()
     }
 
     eax_ensure_compatibility();
+    eax_initialize_filter_gain();
     eax_set_defaults();
     eax_set_air_absorbtion_hf();
     eax_update_speaker_configuration();
@@ -573,6 +717,11 @@ void ALCcontext::eax_update_speaker_configuration()
     eax_speaker_config_ = eax_detect_speaker_configuration();
 }
 
+void ALCcontext::eax_initialize_filter_gain()
+{
+    eax_max_filter_gain_ = level_mb_to_gain(GainMixMax / mGainBoost);
+}
+
 void ALCcontext::eax_set_last_error_defaults() noexcept
 {
     eax_last_error_ = EAX_OK;
@@ -613,14 +762,12 @@ void ALCcontext::eax_unlock_legacy_fx_slots(const EaxEaxCall& eax_call) noexcept
 void ALCcontext::eax_dispatch_fx_slot(
     const EaxEaxCall& eax_call)
 {
-    const auto fx_slot_index = eax_call.get_fx_slot_index();
-    if(!fx_slot_index.has_value())
-        eax_fail("Invalid fx slot index.");
+    auto& fx_slot = eax_get_fx_slot(eax_call.get_fx_slot_index());
 
-    auto& fx_slot = eax_get_fx_slot(*fx_slot_index);
-    if(fx_slot.eax_dispatch(eax_call))
+    if (fx_slot.eax_dispatch(eax_call))
     {
         std::lock_guard<std::mutex> source_lock{mSourceLock};
+
         eax_update_filters();
     }
 }
@@ -768,13 +915,13 @@ void ALCcontext::eax_set_primary_fx_slot_id()
 void ALCcontext::eax_set_distance_factor()
 {
     mListener.mMetersPerUnit = eax_.context.flDistanceFactor;
-    mPropsDirty = true;
+    mPropsDirty.set(std::memory_order_release);
 }
 
 void ALCcontext::eax_set_air_absorbtion_hf()
 {
     mAirAbsorptionGainHF = eax_.context.flAirAbsorptionHF;
-    mPropsDirty = true;
+    mPropsDirty.set(std::memory_order_release);
 }
 
 void ALCcontext::eax_set_hf_reference()
@@ -805,17 +952,21 @@ void ALCcontext::eax_initialize_fx_slots()
 void ALCcontext::eax_initialize_sources()
 {
     std::unique_lock<std::mutex> source_lock{mSourceLock};
-    auto init_source = [this](ALsource &source) noexcept
-    { source.eax_initialize(this); };
-    ForEachSource(this, init_source);
+
+    for (auto& source : SourceListEnumerator{mSourceList})
+    {
+        source.eax_initialize(this);
+    }
 }
 
 void ALCcontext::eax_update_sources()
 {
     std::unique_lock<std::mutex> source_lock{mSourceLock};
-    auto update_source = [this](ALsource &source)
-    { source.eax_update(eax_context_shared_dirty_flags_); };
-    ForEachSource(this, update_source);
+
+    for (auto& source : SourceListEnumerator{mSourceList})
+    {
+        source.eax_update(eax_context_shared_dirty_flags_);
+    }
 }
 
 void ALCcontext::eax_validate_primary_fx_slot_id(
@@ -1138,20 +1289,22 @@ void ALCcontext::eax_set(
             eax_fail("Unsupported property id.");
     }
 
-    if(!eax_call.is_deferred())
+    if (!eax_call.is_deferred())
     {
         eax_apply_deferred();
+        if(!mDeferUpdates.load(std::memory_order_acquire))
+        {
+            mHoldUpdates.store(true, std::memory_order_release);
+            while((mUpdateCount.load(std::memory_order_acquire)&1) != 0) {
+                /* busy-wait */
+            }
 
-        mHoldUpdates.store(true, std::memory_order_release);
-        while((mUpdateCount.load(std::memory_order_acquire)&1) != 0) {
-            /* busy-wait */
+            if(mPropsDirty.test_and_clear(std::memory_order_acq_rel))
+                UpdateContextProps(this);
+            UpdateAllSourceProps(this);
+
+            mHoldUpdates.store(false, std::memory_order_release);
         }
-
-        if(std::exchange(mPropsDirty, false))
-            UpdateContextProps(this);
-        UpdateAllSourceProps(this);
-
-        mHoldUpdates.store(false, std::memory_order_release);
     }
 }
 

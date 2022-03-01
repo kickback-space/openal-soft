@@ -2,12 +2,14 @@
 #define AL_LISTENER_H
 
 #include <array>
+#include <atomic>
 
 #include "AL/al.h"
 #include "AL/alc.h"
 #include "AL/efx.h"
 
 #include "almalloc.h"
+#include "atomic.h"
 
 
 struct ALlistener {

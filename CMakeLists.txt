@@ -86,6 +86,7 @@ option(ALSOFT_UTILS "Build utility programs"  ON)
 option(ALSOFT_NO_CONFIG_UTIL "Disable building the alsoft-config utility" OFF)
 
 option(ALSOFT_EXAMPLES  "Build example programs"  ON)
+option(UNITY_PLUGIN  "Build Unity Plugin"  ON)
 
 option(ALSOFT_INSTALL "Install main library" ON)
 option(ALSOFT_INSTALL_CONFIG "Install alsoft.conf sample configuration file" ON)
@@ -95,7 +96,7 @@ option(ALSOFT_INSTALL_EXAMPLES "Install example programs (alplay, alstream, ...)
 option(ALSOFT_INSTALL_UTILS "Install utility programs (openal-info, alsoft-config, ...)" ON)
 option(ALSOFT_UPDATE_BUILD_VERSION "Update git build version info" ON)
 
-option(ALSOFT_EAX "Enable legacy EAX extensions" ${WIN32})
+option(ALSOFT_EAX "Enable EAX extensions." $<BOOL:WIN32>)
 
 if(DEFINED SHARE_INSTALL_DIR)
     message(WARNING "SHARE_INSTALL_DIR is deprecated.  Use the variables provided by the GNUInstallDirs module instead")
@@ -562,15 +563,57 @@ if(NOT WIN32)
 
     # Some systems need pthread_np.h to get pthread_setname_np
     check_include_files("pthread.h;pthread_np.h" HAVE_PTHREAD_NP_H)
+    set(HAVE_PTHREAD_NP_H TRUE)
     if(HAVE_PTHREAD_NP_H)
+    message("lol")
         check_symbol_exists(pthread_setname_np "pthread.h;pthread_np.h" HAVE_PTHREAD_SETNAME_NP)
         if(NOT HAVE_PTHREAD_SETNAME_NP)
             check_symbol_exists(pthread_set_name_np "pthread.h;pthread_np.h" HAVE_PTHREAD_SET_NAME_NP)
+        else()
+            check_c_source_compiles("
+#include <pthread.h>
+#include <pthread_np.h>
+int main()
+{
+    pthread_setname_np(\"testname\");
+    return 0;
+}"
+                PTHREAD_SETNAME_NP_ONE_PARAM
+            )
+            check_c_source_compiles("
+#include <pthread.h>
+#include <pthread_np.h>
+int main()
+{
+    pthread_setname_np(pthread_self(), \"%s\", \"testname\");
+    return 0;
+}"
+                PTHREAD_SETNAME_NP_THREE_PARAMS
+            )
         endif()
     else()
         check_symbol_exists(pthread_setname_np pthread.h HAVE_PTHREAD_SETNAME_NP)
         if(NOT HAVE_PTHREAD_SETNAME_NP)
             check_symbol_exists(pthread_set_name_np pthread.h HAVE_PTHREAD_SET_NAME_NP)
+        else()
+            check_c_source_compiles("
+#include <pthread.h>
+int main()
+{
+    pthread_setname_np(\"testname\");
+    return 0;
+}"
+                PTHREAD_SETNAME_NP_ONE_PARAM
+            )
+            check_c_source_compiles("
+#include <pthread.h>
+int main()
+{
+    pthread_setname_np(pthread_self(), \"%s\", \"testname\");
+    return 0;
+}"
+                PTHREAD_SETNAME_NP_THREE_PARAMS
+            )
         endif()
     endif()
 endif()
@@ -1432,30 +1475,32 @@ if(HAS_ROUTER)
     message(STATUS "Building DLL router")
 endif()
 
-message(STATUS "")
-message(STATUS "Building OpenAL with support for the following backends:")
-message(STATUS "   ${BACKENDS}")
-message(STATUS "")
-message(STATUS "Building with support for CPU extensions:")
-message(STATUS "    ${CPU_EXTS}")
-message(STATUS "")
+message(STATUS "
+Building OpenAL with support for the following backends:
+    ${BACKENDS}
+
+Building with support for CPU extensions:
+    ${CPU_EXTS}
+")
 if(FPMATH_SET)
-    message(STATUS "Building with SSE${FPMATH_SET} codegen")
-    message(STATUS "")
+    message(STATUS "Building with SSE${FPMATH_SET} codegen
+")
 endif()
 
 if(ALSOFT_EAX)
-    message(STATUS "Building with legacy EAX extension support")
-    message(STATUS "")
+    message(STATUS "Building with deprecated EAX extensions
+")
 endif()
 
 if(ALSOFT_EMBED_HRTF_DATA)
-    message(STATUS "Embedding HRTF datasets")
-    message(STATUS "")
+    message(STATUS "Embedding HRTF datasets
+")
 endif()
 
-# An alias for sub-project builds
-add_library(OpenAL::OpenAL ALIAS OpenAL)
+if(ALSOFT_EAX)
+    message(STATUS "Enabled deprecated EAX extensions
+")
+endif()
 
 # Install main library
 if(ALSOFT_INSTALL)
@@ -1592,7 +1637,7 @@ add_library(ex-common STATIC EXCLUDE_FROM_ALL
     examples/common/alhelpers.h)
 target_compile_definitions(ex-common PUBLIC ${CPP_DEFS})
 target_include_directories(ex-common PUBLIC ${OpenAL_SOURCE_DIR}/common)
-target_compile_options(ex-common PUBLIC ${C_FLAGS})
+target_compile_options(ex-common PUBLIC ${C_FLAGS} -fPIC)
 target_link_libraries(ex-common PUBLIC OpenAL PRIVATE ${RT_LIB})
 
 if(ALSOFT_EXAMPLES)
@@ -1619,7 +1664,7 @@ if(ALSOFT_EXAMPLES)
 
         add_executable(alreverb examples/alreverb.c)
         target_link_libraries(alreverb PRIVATE ${LINKER_FLAGS} SndFile::SndFile ex-common
-            ${UNICODE_FLAG})
+            ${UNICODE_FLAG} -pthread)
 
         add_executable(almultireverb examples/almultireverb.c)
         target_link_libraries(almultireverb
@@ -1699,6 +1744,10 @@ if(ALSOFT_EXAMPLES)
         endif()
     endif()
     message(STATUS "")
+endif()
+
+if(UNITY_PLUGIN)
+    add_subdirectory(UnityPlugin)
 endif()
 
 if(EXTRA_INSTALLS)

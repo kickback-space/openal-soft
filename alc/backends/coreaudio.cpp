@@ -51,6 +51,8 @@ namespace {
 #define CAN_ENUMERATE 1
 #endif
 
+static const char ca_device[] = "CoreAudio Default";
+
 
 #if CAN_ENUMERATE
 struct DeviceEntry {
@@ -244,10 +246,6 @@ void EnumerateDevices(std::vector<DeviceEntry> &list, bool isCapture)
     newdevs.shrink_to_fit();
     newdevs.swap(list);
 }
-
-#else
-
-static constexpr char ca_device[] = "CoreAudio Default";
 #endif
 
 

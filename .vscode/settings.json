@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "sndfile.h": "c",
+        "al.h": "c",
+        "atomic": "cpp",
+        "*.tcc": "cpp",
+        "fstream": "cpp",
+        "sstream": "cpp",
+        "iosfwd": "cpp"
+    }
+}

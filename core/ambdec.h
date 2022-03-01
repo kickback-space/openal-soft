@@ -46,8 +46,6 @@ struct AmbDecConf {
     float HFOrderGain[MaxAmbiOrder+1]{};
     CoeffArray *HFMatrix;
 
-    ~AmbDecConf();
-
     al::optional<std::string> load(const char *fname) noexcept;
 };
 

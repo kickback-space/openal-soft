@@ -25,7 +25,7 @@ template<typename T, bool = std::is_trivially_destructible<T>::value>
 struct optstore_base {
     bool mHasValue{false};
     union {
-        char mDummy{};
+        char mDummy;
         T mValue;
     };
 
@@ -43,7 +43,7 @@ template<typename T>
 struct optstore_base<T, false> {
     bool mHasValue{false};
     union {
-        char mDummy{};
+        char mDummy;
         T mValue;
     };
 
@@ -240,7 +240,7 @@ struct optional_storage<T, false, false, false, false> : public optstore_helper<
 
 } // namespace detail_
 
-#define REQUIRES(...) std::enable_if_t<(__VA_ARGS__),bool> = true
+#define REQUIRES(...) bool rt_=true, std::enable_if_t<rt_ && (__VA_ARGS__),bool> = true
 
 template<typename T>
 class optional {
@@ -300,7 +300,7 @@ public:
     constexpr const T&& operator*() const&& { return std::move(mStore.mValue); }
     constexpr T&& operator*() && { return std::move(mStore.mValue); }
 
-    constexpr explicit operator bool() const noexcept { return mStore.mHasValue; }
+    constexpr operator bool() const noexcept { return mStore.mHasValue; }
     constexpr bool has_value() const noexcept { return mStore.mHasValue; }
 
     constexpr T& value() & { return mStore.mValue; }

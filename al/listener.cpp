@@ -40,18 +40,16 @@ namespace {
 
 inline void UpdateProps(ALCcontext *context)
 {
-    if(!context->mDeferUpdates)
-    {
+    if(!context->mDeferUpdates.load(std::memory_order_acquire))
         UpdateContextProps(context);
-        return;
-    }
-    context->mPropsDirty = true;
+    else
+        context->mPropsDirty.set(std::memory_order_release);
 }
 
 #ifdef ALSOFT_EAX
 inline void CommitAndUpdateProps(ALCcontext *context)
 {
-    if(!context->mDeferUpdates)
+    if(!context->mDeferUpdates.load(std::memory_order_acquire))
     {
         if(context->has_eax())
         {
@@ -64,9 +62,9 @@ inline void CommitAndUpdateProps(ALCcontext *context)
         }
         UpdateContextProps(context);
         context->mHoldUpdates.store(false, std::memory_order_release);
-        return;
     }
-    context->mPropsDirty = true;
+    else
+        context->mPropsDirty.set(std::memory_order_release);
 }
 
 #else

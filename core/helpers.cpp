@@ -12,7 +12,6 @@
 #include <mutex>
 #include <limits>
 #include <string>
-#include <tuple>
 
 #include "almalloc.h"
 #include "alfstream.h"
@@ -433,11 +432,8 @@ bool SetRTPriorityPthread(int prio)
 #endif
         err = pthread_setschedparam(pthread_self(), SCHED_RR, &param);
     if(err == 0) return true;
-
-#else
-
-    std::ignore = prio;
 #endif
+
     WARN("pthread_setschedparam failed: %s (%d)\n", std::strerror(err), err);
     return false;
 }
@@ -535,7 +531,6 @@ bool SetRTPriorityRTKit(int prio)
 
 #else
 
-    std::ignore = prio;
     WARN("D-Bus not supported\n");
 #endif
     return false;
