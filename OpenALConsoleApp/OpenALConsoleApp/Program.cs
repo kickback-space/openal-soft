@@ -1,5 +1,5 @@
 ﻿using AudioSpace;
-using OpenALConsoleApp;
+using OpenALConsoleApp.Examples;
 
 class Program
 {

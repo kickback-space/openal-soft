@@ -1,49 +1,5 @@
-#include "audioplugin.h"
 #include "AudioListener.h"
-#include "AudioBuffer.h"
 
-/* Filter object functions */
-static LPALGENFILTERS alGenFilters;
-static LPALDELETEFILTERS alDeleteFilters;
-static LPALISFILTER alIsFilter;
-static LPALFILTERI alFilteri;
-static LPALFILTERIV alFilteriv;
-static LPALFILTERF alFilterf;
-static LPALFILTERFV alFilterfv;
-static LPALGETFILTERI alGetFilteri;
-static LPALGETFILTERIV alGetFilteriv;
-static LPALGETFILTERF alGetFilterf;
-static LPALGETFILTERFV alGetFilterfv;
-
-/* Effect object functions */
-static LPALGENEFFECTS alGenEffects;
-static LPALDELETEEFFECTS alDeleteEffects;
-static LPALISEFFECT alIsEffect;
-static LPALEFFECTI alEffecti;
-static LPALEFFECTIV alEffectiv;
-static LPALEFFECTF alEffectf;
-static LPALEFFECTFV alEffectfv;
-static LPALGETEFFECTI alGetEffecti;
-static LPALGETEFFECTIV alGetEffectiv;
-static LPALGETEFFECTF alGetEffectf;
-static LPALGETEFFECTFV alGetEffectfv;
-
-/* Auxiliary Effect Slot object functions */
-static LPALGENAUXILIARYEFFECTSLOTS alGenAuxiliaryEffectSlots;
-static LPALDELETEAUXILIARYEFFECTSLOTS alDeleteAuxiliaryEffectSlots;
-static LPALISAUXILIARYEFFECTSLOT alIsAuxiliaryEffectSlot;
-static LPALAUXILIARYEFFECTSLOTI alAuxiliaryEffectSloti;
-static LPALAUXILIARYEFFECTSLOTIV alAuxiliaryEffectSlotiv;
-static LPALAUXILIARYEFFECTSLOTF alAuxiliaryEffectSlotf;
-static LPALAUXILIARYEFFECTSLOTFV alAuxiliaryEffectSlotfv;
-static LPALGETAUXILIARYEFFECTSLOTI alGetAuxiliaryEffectSloti;
-static LPALGETAUXILIARYEFFECTSLOTIV alGetAuxiliaryEffectSlotiv;
-static LPALGETAUXILIARYEFFECTSLOTF alGetAuxiliaryEffectSlotf;
-static LPALGETAUXILIARYEFFECTSLOTFV alGetAuxiliaryEffectSlotfv;
-
-/* LoadEffect loads the given initial reverb properties into the given OpenAL
- * effect object, and returns non-zero on success.
- */
 static int LoadEffect(ALuint effect, const EFXEAXREVERBPROPERTIES *reverb)
 {
     ALenum err;
@@ -93,84 +49,6 @@ static int LoadEffect(ALuint effect, const EFXEAXREVERBPROPERTIES *reverb)
     }
 
     return 1;
-}
-
-/* LoadBuffer loads the named audio file into an OpenAL buffer object, and
- * returns the new buffer ID.
- */
-static ALuint LoadSound(const char *filename)
-{
-    ALenum err, format;
-    ALuint buffer;
-    SNDFILE *sndfile;
-    SF_INFO sfinfo;
-    short *membuf;
-    sf_count_t num_frames;
-    ALsizei num_bytes;
-
-    /* Open the audio file and check that it's usable. */
-    sndfile = sf_open(filename, SFM_READ, &sfinfo);
-    if (!sndfile)
-    {
-        fprintf(stderr, "Could not open audio in %s: %s\n", filename, sf_strerror(sndfile));
-        return 0;
-    }
-    if (sfinfo.frames < 1 || sfinfo.frames > (sf_count_t)(INT_MAX / sizeof(short)) / sfinfo.channels)
-    {
-        fprintf(stderr, "Bad sample count in %s (%" PRId64 ")\n", filename, sfinfo.frames);
-        sf_close(sndfile);
-        return 0;
-    }
-
-    /* Get the sound format, and figure out the OpenAL format */
-    if (sfinfo.channels == 1)
-        format = AL_FORMAT_MONO16;
-    else if (sfinfo.channels == 2)
-        format = AL_FORMAT_STEREO16;
-    else
-    {
-        fprintf(stderr, "Unsupported channel count: %d\n", sfinfo.channels);
-        sf_close(sndfile);
-        return 0;
-    }
-    printf("channels: %d\n", sfinfo.channels);
-
-    /* Decode the whole audio file to a buffer. */
-    membuf = (short *)malloc((size_t)(sfinfo.frames * sfinfo.channels) * sizeof(short));
-
-    num_frames = sf_readf_short(sndfile, membuf, sfinfo.frames);
-    if (num_frames < 1)
-    {
-        free(membuf);
-        sf_close(sndfile);
-        fprintf(stderr, "Failed to read samples in %s (%" PRId64 ")\n", filename, num_frames);
-        return 0;
-    }
-    num_bytes = (ALsizei)(num_frames * sfinfo.channels) * (ALsizei)sizeof(short);
-
-    /* Buffer the audio data into a new buffer object, then free the data and
-     * close the file.
-     */
-    buffer = 0;
-    alGenBuffers(1, &buffer);
-    alBufferData(buffer, format, membuf, num_bytes, sfinfo.samplerate);
-
-    printf("samplerate: %d", sfinfo.samplerate);
-
-    free(membuf);
-    sf_close(sndfile);
-
-    /* Check if an error occured, and clean up if so. */
-    err = alGetError();
-    if (err != AL_NO_ERROR)
-    {
-        fprintf(stderr, "OpenAL Error: %s\n", alGetString(err));
-        if (buffer && alIsBuffer(buffer))
-            alDeleteBuffers(1, &buffer);
-        return 0;
-    }
-
-    return buffer;
 }
 
 /* Helper to calculate the dot-product of the two given vectors. */
@@ -392,262 +270,11 @@ static void UpdateListenerAndEffects(float timediff, const ALuint slots[2], cons
     alAuxiliaryEffectSloti(slots[1], AL_EFFECTSLOT_EFFECT, (ALint)effects[1]);
 }
 
-extern "C"
+int AudioListener::InitAudioListener()
 {
-    UNITY_INTERFACE_EXPORT void MyRegisterDebugCallback(OnMyDebugCallback cb)
+    if (InitAL(nullptr, 0) != 0)
     {
-        RegisterDebugCallback(cb);
-    }
-
-    UNITY_INTERFACE_EXPORT void MyTestDebugLog(const char *msg)
-    {
-        MyDebug::Log(msg, Color::Black);
-    }
-
-    static const int MaxTransitions = 8;
-    EFXEAXREVERBPROPERTIES reverbs[2] = {
-        EFX_REVERB_PRESET_CARPETEDHALLWAY,
-        EFX_REVERB_PRESET_BATHROOM};
-    ALCdevice *device = NULL;
-    ALCcontext *context = NULL;
-    ALuint effects[2] = {0, 0};
-    ALuint slots[2] = {0, 0};
-    ALuint direct_filter = 0;
-    ALuint source = 0;
-    ALCint num_sends = 0;
-    ALenum state = AL_INITIAL;
-    ALfloat direct_gain = 1.0f;
-    int basetime = 0;
-    int loops = 0;
-
-    UNITY_INTERFACE_EXPORT int InitOpenAL()
-    {
-        AudioListener* audioListener = new AudioListener();
-        int err = audioListener->InitAudioListener();
-        if(err != 0){
-
-        }
-        return 0;
-    }
-
-    UNITY_INTERFACE_EXPORT ALuint LoadSoundRaw(void *input, int size, int samplerate)
-    {
-        ALuint buffer = 0;
-        ALenum format = AL_FORMAT_MONO16;
-        printf("size: %d", size);
-        printf("input*: %d", input);
-        alGenBuffers(1, &buffer);
-        alBufferData(buffer, format, input, size, samplerate);
-        ALenum err = alGetError();
-        if (err != AL_NO_ERROR)
-        {
-            fprintf(stderr, "OpenAL Error: %s\n", alGetString(err));
-            if (buffer && alIsBuffer(buffer))
-                alDeleteBuffers(1, &buffer);
-            return 0;
-        }
-        return buffer;
-    }
-
-    UNITY_INTERFACE_EXPORT int PlayAudio(ALuint buffer)
-    {
-
-        if (!buffer)
-        {
-            CloseAL();
-            return 1;
-        }
-
-        /* Generate two effects for two "zones", and load a reverb into each one.
-         * Note that unlike single-zone reverb, where you can store one effect per
-         * preset, for multi-zone reverb you should have one effect per environment
-         * instance, or one per audible zone. This is because we'll be changing the
-         * effects' properties in real-time based on the environment instance
-         * relative to the listener.
-         */
-        alGenEffects(2, effects);
-        if (!LoadEffect(effects[0], &reverbs[0]) || !LoadEffect(effects[1], &reverbs[1]))
-        {
-            alDeleteEffects(2, effects);
-            alDeleteBuffers(1, &buffer);
-            CloseAL();
-            return 1;
-        }
-
-        /* Create the effect slot objects, one for each "active" effect. */
-        alGenAuxiliaryEffectSlots(2, slots);
-
-        /* Tell the effect slots to use the loaded effect objects, with slot 0 for
-         * Zone 0 and slot 1 for Zone 1. Note that this effectively copies the
-         * effect properties. Modifying or deleting the effect object afterward
-         * won't directly affect the effect slot until they're reapplied like this.
-         */
-        alAuxiliaryEffectSloti(slots[0], AL_EFFECTSLOT_EFFECT, (ALint)effects[0]);
-        alAuxiliaryEffectSloti(slots[1], AL_EFFECTSLOT_EFFECT, (ALint)effects[1]);
-        assert(alGetError() == AL_NO_ERROR && "Failed to set effect slot");
-
-        /* For the purposes of this example, prepare a filter that optionally
-         * silences the direct path which allows us to hear just the reverberation.
-         * A filter like this is normally used for obstruction, where the path
-         * directly between the listener and source is blocked (the exact
-         * properties depending on the type and thickness of the obstructing
-         * material).
-         */
-        alGenFilters(1, &direct_filter);
-        alFilteri(direct_filter, AL_FILTER_TYPE, AL_FILTER_LOWPASS);
-        alFilterf(direct_filter, AL_LOWPASS_GAIN, direct_gain);
-        assert(alGetError() == AL_NO_ERROR && "Failed to set direct filter");
-
-        /* Create the source to play the sound with, place it in front of the
-         * listener's path in the left zone.
-         */
-        source = 0;
-        alGenSources(1, &source);
-        alSourcei(source, AL_LOOPING, AL_TRUE);
-        alSource3f(source, AL_POSITION, -5.0f, 0.0f, -2.0f);
-        alSourcei(source, AL_DIRECT_FILTER, (ALint)direct_filter);
-        alSourcei(source, AL_BUFFER, (ALint)buffer);
-
-        /* Connect the source to the effect slots. Here, we connect source send 0
-         * to Zone 0's slot, and send 1 to Zone 1's slot. Filters can be specified
-         * to occlude the source from each zone by varying amounts; for example, a
-         * source within a particular zone would be unfiltered, while a source that
-         * can only see a zone through a window or thin wall may be attenuated for
-         * that zone.
-         */
-        alSource3i(source, AL_AUXILIARY_SEND_FILTER, (ALint)slots[0], 0, AL_FILTER_NULL);
-        alSource3i(source, AL_AUXILIARY_SEND_FILTER, (ALint)slots[1], 1, AL_FILTER_NULL);
-        assert(alGetError() == AL_NO_ERROR && "Failed to setup sound source");
-
-        /* Get the current time as the base for timing in the main loop. */
-        basetime = altime_get();
-        loops = 0;
-        printf("Transition %d of %d...\n", loops + 1, MaxTransitions);
-
-        /* Play the sound for a while. */
-        alSourcePlay(source);
-        do
-        {
-            int curtime;
-            ALfloat timediff;
-
-            /* Start a batch update, to ensure all changes apply simultaneously. */
-            alcSuspendContext(context);
-
-            /* Get the current time to track the amount of time that passed.
-             * Convert the difference to seconds.
-             */
-            curtime = altime_get();
-            timediff = (float)(curtime - basetime) / 1000.0f;
-
-            /* Avoid negative time deltas, in case of non-monotonic clocks. */
-            if (timediff < 0.0f)
-                timediff = 0.0f;
-            else
-                while (timediff >= 4.0f * (float)((loops & 1) + 1))
-                {
-                    /* For this example, each transition occurs over 4 seconds, and
-                     * there's 2 transitions per cycle.
-                     */
-                    if (++loops < MaxTransitions)
-                        printf("Transition %d of %d...\n", loops + 1, MaxTransitions);
-                    if (!(loops & 1))
-                    {
-                        /* Cycle completed. Decrease the delta and increase the base
-                         * time to start a new cycle.
-                         */
-                        timediff -= 8.0f;
-                        basetime += 8000;
-                    }
-                }
-
-            /* Update the listener and effects, and finish the batch. */
-            UpdateListenerAndEffects(timediff, slots, effects, reverbs);
-            alcProcessContext(context);
-
-            al_nssleep(10000000);
-
-            alGetSourcei(source, AL_SOURCE_STATE, &state);
-        } while (alGetError() == AL_NO_ERROR && state == AL_PLAYING && loops < MaxTransitions);
-
-        /* All done. Delete resources, and close down OpenAL. */
-        alDeleteSources(1, &source);
-        alDeleteAuxiliaryEffectSlots(2, slots);
-        alDeleteEffects(2, effects);
-        alDeleteFilters(1, &direct_filter);
-        alDeleteBuffers(1, &buffer);
-
-        CloseAL();
-        printf("Done!");
-        return 0;
-    }
-}
-
-int main(/* int argc, char **argv */)
-{
-    int argc;
-    char **argv = new char *[4];
-    argc = 4;
-    argv[0] = "./audiospace";
-    argv[1] = "-device";
-    argv[2] = "boAt Rockerz";
-    argv[3] = "/LinuxData/Kickback/openal-soft/UnitySource/OpenALSoft_Unity/Assets/sample_audios/car-ignition-3.wav";
-    printf("argc %d\n", argc);
-
-    for (size_t i = 0; i < argc; i++)
-    {
-        printf("arg %d: %s\n", i, argv[i]);
-    }
-
-    static const int MaxTransitions = 8;
-    EFXEAXREVERBPROPERTIES reverbs[2] = {
-        EFX_REVERB_PRESET_CARPETEDHALLWAY,
-        EFX_REVERB_PRESET_BATHROOM};
-    ALCdevice *device = NULL;
-    ALCcontext *context = NULL;
-    ALuint effects[2] = {0, 0};
-    ALuint slots[2] = {0, 0};
-    ALuint direct_filter = 0;
-    ALuint buffer = 0;
-    ALuint source = 0;
-    ALCint num_sends = 0;
-    ALenum state = AL_INITIAL;
-    ALfloat direct_gain = 1.0f;
-    int basetime = 0;
-    int loops = 0;
-
-    /* Print out usage if no arguments were specified */
-    if (argc < 2)
-    {
-        fprintf(stderr, "Usage: %s [-device <name>] [options] <filename>\n\n"
-                        "Options:\n"
-                        "\t-nodirect\tSilence direct path output (easier to hear reverb)\n\n",
-                argv[0]);
-        return 1;
-    }
-
-    /* Initialize OpenAL, and check for EFX support with at least 2 auxiliary
-     * sends (if multiple sends are supported, 2 are provided by default; if
-     * you want more, you have to request it through alcCreateContext).
-     */
-    argv++;
-    argc--;
-    if (InitAL(&argv, &argc) != 0)
-        return 1;
-
-    while (argc > 0)
-    {
-        if (strcmp(argv[0], "-nodirect") == 0)
-            direct_gain = 0.0f;
-        else
-            break;
-        argv++;
-        argc--;
-    }
-    if (argc < 1)
-    {
-        fprintf(stderr, "No filename spacified.\n");
-        CloseAL();
+        MyDebug::Log("InitAL error: Unable to initealize OpenAL");
         return 1;
     }
 
@@ -709,9 +336,32 @@ int main(/* int argc, char **argv */)
     LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTF, alGetAuxiliaryEffectSlotf);
     LOAD_PROC(LPALGETAUXILIARYEFFECTSLOTFV, alGetAuxiliaryEffectSlotfv);
 #undef LOAD_PROC
+    MyDebug::Log("OpenAL Initialized");
+    return 0;
+}
 
-    /* Load the sound into a buffer. */
-    buffer = LoadSound(argv[0]);
+ALuint AudioListener::LoadSoundRaw(void *input, int size, int samplerate)
+{
+    ALuint buffer = 0;
+    ALenum format = AL_FORMAT_MONO16;
+    printf("size: %d", size);
+    printf("input*: %d", input);
+    alGenBuffers(1, &buffer);
+    alBufferData(buffer, format, input, size, samplerate);
+    ALenum err = alGetError();
+    if (err != AL_NO_ERROR)
+    {
+        fprintf(stderr, "OpenAL Error: %s\n", alGetString(err));
+        if (buffer && alIsBuffer(buffer))
+            alDeleteBuffers(1, &buffer);
+        return 0;
+    }
+    return buffer;
+}
+
+int AudioListener::PlayAudio(ALuint buffer)
+{
+
     if (!buffer)
     {
         CloseAL();
@@ -838,6 +488,6 @@ int main(/* int argc, char **argv */)
     alDeleteBuffers(1, &buffer);
 
     CloseAL();
-
+    printf("Done!");
     return 0;
 }

@@ -21,16 +21,16 @@ namespace AudioSpace
             string debug_string = Marshal.PtrToStringAnsi(request, size);
 
             //Add Specified Color
-            debug_string =
+            /*debug_string =
                 String.Format("{0}{1}{2}{3}{4}",
                     "<color=",
                     ((Color)color).ToString(),
                     ">",
                     debug_string,
                     "</color>"
-                );
+                );*/
 
-            Console.WriteLine(debug_string);
+            Console.WriteLine("Plugin debugger: "+debug_string);
         }
 
         public void TestDebugLog(string msg)
