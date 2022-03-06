@@ -46,6 +46,14 @@ void MyDebug::Log(const bool message, Color color) {
     send_log(ss, color);
 }
 
+
+void MyDebug::Log(const Vector3 message, Color color) {
+
+    std::stringstream ss;
+    ss << message;
+    send_log(ss, color);
+}
+
 void MyDebug::send_log(const std::stringstream &ss, const Color &color) {
     const std::string tmp = ss.str();
     const char* tmsg = tmp.c_str();

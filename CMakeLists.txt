@@ -140,7 +140,8 @@ endif()
 
 # QNX's gcc do not uses /usr/include and /usr/lib pathes by default
 if("${CMAKE_C_PLATFORM_ID}" STREQUAL "QNX")
-    set(INC_PATHS ${INC_PATHS} /usr/include)
+    # set(INC_PATHS ${INC_PATHS} /usr/include)
+    set(INC_PATHS ${INC_PATHS} /usr/include/linux)
     set(LINKER_FLAGS ${LINKER_FLAGS} -L/usr/lib)
 endif()
 

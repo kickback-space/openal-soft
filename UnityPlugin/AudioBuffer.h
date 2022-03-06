@@ -4,17 +4,11 @@
 class AudioBuffer
 {
 private:
-    /* data */
+    ALuint* Buffer;
+    int Size;
 public:
-    AudioBuffer(/* args */);
+    AudioBuffer(int size);
     ~AudioBuffer();
-    ALuint CreateAudioBuffer(void *input, int size, int samplerate);
+    int CopyAudioToBuffer(int bufferIndex,void *input, int size, int samplerate, ALenum format);
+    void DeleteAudioBuffer();
 };
-
-AudioBuffer::AudioBuffer(/* args */)
-{
-}
-
-AudioBuffer::~AudioBuffer()
-{
-}

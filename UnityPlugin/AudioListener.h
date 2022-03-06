@@ -1,44 +1,5 @@
-
+#pragma once
 #include "pch.h"
-
-/* Filter object functions */
-static LPALGENFILTERS alGenFilters;
-static LPALDELETEFILTERS alDeleteFilters;
-static LPALISFILTER alIsFilter;
-static LPALFILTERI alFilteri;
-static LPALFILTERIV alFilteriv;
-static LPALFILTERF alFilterf;
-static LPALFILTERFV alFilterfv;
-static LPALGETFILTERI alGetFilteri;
-static LPALGETFILTERIV alGetFilteriv;
-static LPALGETFILTERF alGetFilterf;
-static LPALGETFILTERFV alGetFilterfv;
-
-/* Effect object functions */
-static LPALGENEFFECTS alGenEffects;
-static LPALDELETEEFFECTS alDeleteEffects;
-static LPALISEFFECT alIsEffect;
-static LPALEFFECTI alEffecti;
-static LPALEFFECTIV alEffectiv;
-static LPALEFFECTF alEffectf;
-static LPALEFFECTFV alEffectfv;
-static LPALGETEFFECTI alGetEffecti;
-static LPALGETEFFECTIV alGetEffectiv;
-static LPALGETEFFECTF alGetEffectf;
-static LPALGETEFFECTFV alGetEffectfv;
-
-/* Auxiliary Effect Slot object functions */
-static LPALGENAUXILIARYEFFECTSLOTS alGenAuxiliaryEffectSlots;
-static LPALDELETEAUXILIARYEFFECTSLOTS alDeleteAuxiliaryEffectSlots;
-static LPALISAUXILIARYEFFECTSLOT alIsAuxiliaryEffectSlot;
-static LPALAUXILIARYEFFECTSLOTI alAuxiliaryEffectSloti;
-static LPALAUXILIARYEFFECTSLOTIV alAuxiliaryEffectSlotiv;
-static LPALAUXILIARYEFFECTSLOTF alAuxiliaryEffectSlotf;
-static LPALAUXILIARYEFFECTSLOTFV alAuxiliaryEffectSlotfv;
-static LPALGETAUXILIARYEFFECTSLOTI alGetAuxiliaryEffectSloti;
-static LPALGETAUXILIARYEFFECTSLOTIV alGetAuxiliaryEffectSlotiv;
-static LPALGETAUXILIARYEFFECTSLOTF alGetAuxiliaryEffectSlotf;
-static LPALGETAUXILIARYEFFECTSLOTFV alGetAuxiliaryEffectSlotfv;
 
 /* LoadEffect loads the given initial reverb properties into the given OpenAL
  * effect object, and returns non-zero on success.
@@ -108,6 +69,8 @@ private:
 
 public:
     int InitAudioListener();
-    int PlayAudio(ALuint buffer);
-    ALuint LoadSoundRaw(void *input, int size, int samplerate);
+    int PlayAudio();
+    void CreateAudioSource(ALuint* buffer, int index, Vector3 position);
+    void UpdateListenerAndEffects(float timediff, const ALuint slots[2], const ALuint effects[2], const EFXEAXREVERBPROPERTIES reverbs[2]);
+    int LoadEffect(ALuint effect, const EFXEAXREVERBPROPERTIES *reverb);
 };

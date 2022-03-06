@@ -1,5 +1,7 @@
 #pragma once
 #include "pch.h"
+
+
 // Create a callback delegate
 typedef void (*OnMyDebugCallback) (const char *message, int color, int size);
 static OnMyDebugCallback callbackInstance = nullptr;
@@ -18,6 +20,7 @@ public:
     static void Log(const float message, Color color = Color::Black);
     static void Log(const double message, Color color = Color::Black);
     static void Log(const bool message, Color color = Color::Black);
+    static void Log(const Vector3 message, Color color);
 
 private:
     static void send_log(const std::stringstream &ss, const Color &color);

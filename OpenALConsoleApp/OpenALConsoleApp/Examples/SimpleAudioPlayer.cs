@@ -57,18 +57,14 @@ namespace OpenALConsoleApp.Examples
             }
         }
 
-        public void Start(string audiofile)
+        public void Start(string audiofilePath)
         {
-            int err = NativeMethods.InitOpenAL();
-            int err2 = NativeMethods.InitOpenAL();
-
-            UniquePtr<byte> uniquePtr;
-            ReadAudioFile(audiofile, out uniquePtr);
-
-            int bufferId = NativeMethods.LoadSoundRaw(uniquePtr.ptr, uniquePtr.length, 8000);
-
-            NativeMethods.PlayAudio(bufferId);
-            uniquePtr.Dispose();
+            UniquePtr<byte> audiodataPtr;
+            ReadAudioFile(audiofilePath, out audiodataPtr);
+            
+            
+            
+            audiodataPtr.Dispose();
         }
     }
 }

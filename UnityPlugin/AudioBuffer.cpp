@@ -1,20 +1,43 @@
 #include "AudioBuffer.h"
 
-ALuint AudioBuffer::CreateAudioBuffer(void *input, int size, int samplerate)
+AudioBuffer::AudioBuffer(int size)
 {
-    ALuint buffer = 0;
     ALenum format = AL_FORMAT_MONO16;
     printf("size: %d", size);
-    printf("input*: %d", input);
-    alGenBuffers(1, &buffer);
-    alBufferData(buffer, format, input, size, samplerate);
+
+    Buffer = new ALuint[size];
+    Size = size;
+
+    alGenBuffers(Size, Buffer);
     ALenum err = alGetError();
     if (err != AL_NO_ERROR)
     {
         fprintf(stderr, "OpenAL Error: %s\n", alGetString(err));
-        if (buffer && alIsBuffer(buffer))
-            alDeleteBuffers(1, &buffer);
-        return 0;
+        if (Buffer && alIsBuffer(Buffer[0]))
+            alDeleteBuffers(Size, Buffer);
     }
-    return buffer;
+}
+
+AudioBuffer::~AudioBuffer()
+{
+    AudioBuffer::DeleteAudioBuffer();
+    delete Buffer;
+}
+
+int AudioBuffer::CopyAudioToBuffer(int bufferIndex, void *input, int size, int samplerate, ALenum format){
+    alBufferData(Buffer[bufferIndex], format, input, size, samplerate);
+    ALenum err = alGetError();
+    if (err != AL_NO_ERROR)
+    {
+        fprintf(stderr, "OpenAL Error: %s\n", alGetString(err));
+        if (Buffer && alIsBuffer(Buffer[bufferIndex]))
+            DeleteAudioBuffer();
+    }
+    return err;
+}
+
+void AudioBuffer::DeleteAudioBuffer()
+{
+    alDeleteBuffers(Size, Buffer);
+    Size = 0;
 }

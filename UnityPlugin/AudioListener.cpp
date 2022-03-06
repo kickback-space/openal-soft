@@ -1,6 +1,6 @@
 #include "AudioListener.h"
 
-static int LoadEffect(ALuint effect, const EFXEAXREVERBPROPERTIES *reverb)
+int AudioListener::LoadEffect(ALuint effect, const EFXEAXREVERBPROPERTIES *reverb)
 {
     ALenum err;
 
@@ -76,7 +76,7 @@ static void normalize(ALfloat vec[3])
 }
 
 /* The main update function to update the listener and environment effects. */
-static void UpdateListenerAndEffects(float timediff, const ALuint slots[2], const ALuint effects[2], const EFXEAXREVERBPROPERTIES reverbs[2])
+void AudioListener::UpdateListenerAndEffects(float timediff, const ALuint slots[2], const ALuint effects[2], const EFXEAXREVERBPROPERTIES reverbs[2])
 {
     static const ALfloat listener_move_scale = 10.0f;
     /* Individual reverb zones are connected via "portals". Each portal has a
@@ -340,34 +340,17 @@ int AudioListener::InitAudioListener()
     return 0;
 }
 
-ALuint AudioListener::LoadSoundRaw(void *input, int size, int samplerate)
-{
-    ALuint buffer = 0;
-    ALenum format = AL_FORMAT_MONO16;
-    printf("size: %d", size);
-    printf("input*: %d", input);
-    alGenBuffers(1, &buffer);
-    alBufferData(buffer, format, input, size, samplerate);
-    ALenum err = alGetError();
-    if (err != AL_NO_ERROR)
-    {
-        fprintf(stderr, "OpenAL Error: %s\n", alGetString(err));
-        if (buffer && alIsBuffer(buffer))
-            alDeleteBuffers(1, &buffer);
-        return 0;
-    }
-    return buffer;
+void AudioListener::CreateAudioSource(ALuint* buffer, int index, Vector3 position){
+    source = 0;
+    alGenSources(1, &source);
+    alSourcei(source, AL_LOOPING, AL_TRUE);
+    alSource3f(source, AL_POSITION, position.x, position.y, position.z);
+    alSourcei(source, AL_DIRECT_FILTER, (ALint)direct_filter);
+    alSourcei(source, AL_BUFFER, buffer[index]);
 }
 
-int AudioListener::PlayAudio(ALuint buffer)
+int AudioListener::PlayAudio()
 {
-
-    if (!buffer)
-    {
-        CloseAL();
-        return 1;
-    }
-
     /* Generate two effects for two "zones", and load a reverb into each one.
      * Note that unlike single-zone reverb, where you can store one effect per
      * preset, for multi-zone reverb you should have one effect per environment
@@ -379,7 +362,6 @@ int AudioListener::PlayAudio(ALuint buffer)
     if (!LoadEffect(effects[0], &reverbs[0]) || !LoadEffect(effects[1], &reverbs[1]))
     {
         alDeleteEffects(2, effects);
-        alDeleteBuffers(1, &buffer);
         CloseAL();
         return 1;
     }
@@ -407,16 +389,6 @@ int AudioListener::PlayAudio(ALuint buffer)
     alFilteri(direct_filter, AL_FILTER_TYPE, AL_FILTER_LOWPASS);
     alFilterf(direct_filter, AL_LOWPASS_GAIN, direct_gain);
     assert(alGetError() == AL_NO_ERROR && "Failed to set direct filter");
-
-    /* Create the source to play the sound with, place it in front of the
-     * listener's path in the left zone.
-     */
-    source = 0;
-    alGenSources(1, &source);
-    alSourcei(source, AL_LOOPING, AL_TRUE);
-    alSource3f(source, AL_POSITION, -5.0f, 0.0f, -2.0f);
-    alSourcei(source, AL_DIRECT_FILTER, (ALint)direct_filter);
-    alSourcei(source, AL_BUFFER, (ALint)buffer);
 
     /* Connect the source to the effect slots. Here, we connect source send 0
      * to Zone 0's slot, and send 1 to Zone 1's slot. Filters can be specified
@@ -485,7 +457,6 @@ int AudioListener::PlayAudio(ALuint buffer)
     alDeleteAuxiliaryEffectSlots(2, slots);
     alDeleteEffects(2, effects);
     alDeleteFilters(1, &direct_filter);
-    alDeleteBuffers(1, &buffer);
 
     CloseAL();
     printf("Done!");
