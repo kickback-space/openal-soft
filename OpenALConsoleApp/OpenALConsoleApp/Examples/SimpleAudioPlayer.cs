@@ -66,10 +66,10 @@ namespace OpenALConsoleApp.Examples
             UniquePtr<byte> audiodataPtr;
             ReadAudioFile(audiofilePath, out audiodataPtr);
 
-            AudioBuffer audioBuffer = new AudioBuffer(1);
-            int err = audioBuffer.CopyAudioToBuffer(0, audiodataPtr.ptr, audiodataPtr.length, 8000, AL_FORMAT.AL_FORMAT_MONO16);
+            AudioBuffer audioBuffer = new AudioBuffer(3);
+            int err = audioBuffer.CopyAudioToBuffer(2, audiodataPtr.ptr, audiodataPtr.length, 8000, AL_FORMAT.AL_FORMAT_MONO16);
             
-            audioListener.CreateAudioSource(audioBuffer.GetBufferPtr(), 0, Vector3.One);
+            audioListener.CreateAudioSource(audioBuffer.GetBufferPtr(), 2, Vector3.One);
             audioListener.PlayAudio();
             Debug.Log("Playing....");
 
