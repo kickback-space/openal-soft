@@ -35,7 +35,6 @@ namespace OpenALConsoleApp.Examples
 
             private void ReleaseUnmanagedResources()
             {
-                Console.WriteLine("ReleaseUnmanagedResources");
                 Marshal.FreeHGlobal(ptr);
             }
 
@@ -68,7 +67,7 @@ namespace OpenALConsoleApp.Examples
             ReadAudioFile(audiofilePath, out audiodataPtr);
 
             AudioBuffer audioBuffer = new AudioBuffer(1);
-            audioBuffer.CopyAudioToBuffer(0, audiodataPtr.ptr, audiodataPtr.length, 48000, AL_FORMAT.AL_FORMAT_MONO16);
+            int err = audioBuffer.CopyAudioToBuffer(0, audiodataPtr.ptr, audiodataPtr.length, 8000, AL_FORMAT.AL_FORMAT_MONO16);
             
             audioListener.CreateAudioSource(audioBuffer.GetBufferPtr(), 0, Vector3.One);
             audioListener.PlayAudio();

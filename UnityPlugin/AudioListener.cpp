@@ -347,7 +347,6 @@ void AudioListener::CreateAudioSource(ALuint* buffer, int index, Vector3 positio
     alSource3f(source, AL_POSITION, position.x, position.y, position.z);
     alSourcei(source, AL_DIRECT_FILTER, (ALint)direct_filter);
     alSourcei(source, AL_BUFFER, buffer[index]);
-    MyDebug::Log("CreateAudioSource");
 }
 
 int AudioListener::PlayAudio()

@@ -4,7 +4,7 @@
 class AudioBuffer
 {
 private:
-    ALuint* Buffer;
+    ALuint Buffer;
     int Size;
 public:
     AudioBuffer(int size);
