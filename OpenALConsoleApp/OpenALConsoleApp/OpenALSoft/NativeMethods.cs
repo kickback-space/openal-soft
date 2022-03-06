@@ -40,13 +40,13 @@ namespace OpenAL
         #region Audio Listener
 
         [DllImport(LibName)]
-        public static extern IntPtr CreateAudioListener();
+        public static extern unsafe void* CreateAudioListener();
 
         [DllImport(LibName)]
         public static extern void DestroyAudioListener(IntPtr audioListener);
 
         [DllImport(LibName)]
-        public static extern void CreateAudioSource(IntPtr audioListener, IntPtr buffer, int index);
+        public static extern void CreateAudioSource(IntPtr audioListener, IntPtr buffer, int index, Vector3 position);
 
         [DllImport(LibName)]
         public static extern void PlayAudio(IntPtr audioListener);

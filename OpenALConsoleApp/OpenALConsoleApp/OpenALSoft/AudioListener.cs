@@ -1,3 +1,4 @@
+using System.Numerics;
 using AudioSpace.DummyUnityClasses;
 
 
@@ -8,22 +9,27 @@ namespace OpenAL
         IntPtr self = IntPtr.Zero;
         private int channel = 2;
 
-        AudioListener()
+        public AudioListener()
         {
-            self = NativeMethods.CreateAudioListener();
-#if IsConsoleApp
-    Start();
-#endif
+            unsafe
+            {
+                self = (IntPtr) NativeMethods.CreateAudioListener();
+            }
         }
 
-        public void CreateAudioSource()
+        public void CreateAudioSource(IntPtr buffer, int index, Vector3 position)
         {
-            //NativeMethods.CreateAudioSource(self, );
+            NativeMethods.CreateAudioSource(self, buffer, index, position);
         }
         
-        void Start()
+        public void PlayAudio()
         {
-            
+            NativeMethods.PlayAudio(self);
+        }
+
+        ~AudioListener()
+        {
+            NativeMethods.DestroyAudioListener(self);
         }
     }
 }

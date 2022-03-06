@@ -1,4 +1,9 @@
 
+using System.Diagnostics;
+
+using AudioSpace.DummyUnityClasses;
+using Debug = AudioSpace.DummyUnityClasses.Debug;
+
 namespace OpenAL
 {
     public class AudioBuffer
@@ -6,7 +11,7 @@ namespace OpenAL
         public int BufferSize { private set; get; }
         private IntPtr self;
 
-        AudioBuffer(int bufferSize)
+        public AudioBuffer(int bufferSize)
         {
             self = NativeMethods.CreateAudioBuffer(bufferSize);
             BufferSize = bufferSize;
@@ -25,13 +30,20 @@ namespace OpenAL
 
         public void DestroyBuffer()
         {
+            Debug.Log("DestroyBuffer");
             if (self != IntPtr.Zero)
             {
                 NativeMethods.DestroyAudioBuffer(self);
                 BufferSize = 0;
+                self = IntPtr.Zero;
             }
         }
 
+        public IntPtr GetBufferPtr()
+        {
+            return self;
+        }
+        
         ~AudioBuffer()
         {
             DestroyBuffer();

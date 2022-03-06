@@ -6,7 +6,7 @@
 
 extern "C"
 {
-#pragma region DebugLog
+// #pragma region DebugLog
     UNITY_INTERFACE_EXPORT void MyRegisterDebugCallback(OnMyDebugCallback cb)
     {
         RegisterDebugCallback(cb);
@@ -20,10 +20,10 @@ extern "C"
     {
         MyDebug::Log(position, Color::Black);
     }
-#pragma endregion
+// #pragma endregion
 
-#pragma region Audio Listener
-    UNITY_INTERFACE_EXPORT AudioListener *CreateAudioListener()
+// #pragma region Audio Listener
+    UNITY_INTERFACE_EXPORT void* CreateAudioListener()
     {
         AudioListener *audioListener = new AudioListener();
         int err = audioListener->InitAudioListener();
@@ -48,9 +48,9 @@ extern "C"
     {
         audioListener->PlayAudio();
     }
-#pragma endregion
+// #pragma endregion
 
-#pragma region Audio Buffer
+// #pragma region Audio Buffer
     UNITY_INTERFACE_EXPORT AudioBuffer* CreateAudioBuffer(int bufferSize)
     {
         AudioBuffer* audioBuffer = new AudioBuffer(bufferSize);
@@ -65,5 +65,5 @@ extern "C"
         int err = audioBuffer->CopyAudioToBuffer(buffer_index, input, input_size, samplerate, format);
         return err;
     }
-#pragma endregion
+// #pragma endregion
 }

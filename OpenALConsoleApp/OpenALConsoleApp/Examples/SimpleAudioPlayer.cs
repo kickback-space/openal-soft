@@ -1,7 +1,9 @@
 using System.Diagnostics;
+using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text;
 using OpenAL;
+using Debug = AudioSpace.DummyUnityClasses.Debug;
 
 namespace OpenALConsoleApp.Examples
 {
@@ -59,11 +61,20 @@ namespace OpenALConsoleApp.Examples
 
         public void Start(string audiofilePath)
         {
+
+            AudioListener audioListener = new AudioListener();
+            
             UniquePtr<byte> audiodataPtr;
             ReadAudioFile(audiofilePath, out audiodataPtr);
+
+            AudioBuffer audioBuffer = new AudioBuffer(1);
+            audioBuffer.CopyAudioToBuffer(0, audiodataPtr.ptr, audiodataPtr.length, 48000, AL_FORMAT.AL_FORMAT_MONO16);
             
-            
-            
+            audioListener.CreateAudioSource(audioBuffer.GetBufferPtr(), 0, Vector3.One);
+            audioListener.PlayAudio();
+            Debug.Log("Playing....");
+
+            audioBuffer.DestroyBuffer();
             audiodataPtr.Dispose();
         }
     }
