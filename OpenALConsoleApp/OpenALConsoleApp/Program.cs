@@ -18,6 +18,7 @@ class Program
 
         SimpleAudioPlayer simpleAudioPlayer = new SimpleAudioPlayer();
         simpleAudioPlayer.Start("/LinuxData/Kickback/openal-soft/build/sample_audios/sample2.wav");
+        //simpleAudioPlayer.TestThread();
     }
 
     void InitMyDebug()

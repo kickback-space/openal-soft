@@ -1,5 +1,6 @@
 #pragma once
 #include "pch.h"
+#include "AudioDevice.h"
 
 /* LoadEffect loads the given initial reverb properties into the given OpenAL
  * effect object, and returns non-zero on success.
@@ -67,10 +68,32 @@ private:
     int basetime = 0;
     int loops = 0;
 
+    bool threadStarted = false;
+    std::thread *thread;
+
+    AudioDevice *audiodevice;
+    LPALCRENDERSAMPLESSOFT alcRenderSamplesSOFT;
+    
+    /* Ensure 'buffer' can hold 1024 sample frames when calling (4096
+     * bytes for 16-bit stereo). */
+    // -- sf_count_t is an __int64
+    static const sf_count_t samplesPerChunk = 1024;
+    static const sf_count_t channels = 2;
+    sf_count_t numItemsToWritePerChunk = samplesPerChunk * channels;
+    short samples[samplesPerChunk][channels]{}; // we're rendering floats
+    short *psamples = &samples[0][0];// Pointer to pass by reference to create_file
+
+private:
+    void UpdateListenerThread();
+
 public:
-    int InitAudioListener();
+    int InitAudioListener(AudioDevice *audiodevice);
     int PlayAudio();
-    void CreateAudioSource(ALuint* buffer, int index, Vector3 position);
+    ALuint CreateAudioSource(ALuint *buffer, int index, Vector3 position = Vector3(0,0,0));
+    
     void UpdateListenerAndEffects(float timediff, const ALuint slots[2], const ALuint effects[2], const EFXEAXREVERBPROPERTIES reverbs[2]);
     int LoadEffect(ALuint effect, const EFXEAXREVERBPROPERTIES *reverb);
+
+    void StartListenerThread();
+    void StopListenerThread();
 };

@@ -59,3 +59,4 @@ helping with the low-pass and HRTF filters.
  - Ben Davis for the idea behind a previous version of the click-removal code.
  - Richard Furse for helping with my understanding of Ambisonics that is used by
 the various parts of the library.
+# OpenAL-Unity

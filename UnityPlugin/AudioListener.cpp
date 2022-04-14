@@ -270,16 +270,30 @@ void AudioListener::UpdateListenerAndEffects(float timediff, const ALuint slots[
     alAuxiliaryEffectSloti(slots[1], AL_EFFECTSLOT_EFFECT, (ALint)effects[1]);
 }
 
-int AudioListener::InitAudioListener()
+int AudioListener::InitAudioListener(AudioDevice *_audiodevice)
 {
-    if (InitAL(nullptr, 0) != 0)
-    {
-        MyDebug::Log("InitAL error: Unable to initealize OpenAL");
-        return 1;
-    }
+    AudioListener::audiodevice = _audiodevice;
+    device = _audiodevice->GetDevice();
 
-    context = alcGetCurrentContext();
-    device = alcGetContextsDevice(context);
+    ALCint attrs[] = {
+        /* Standard 16-bit stereo 44.1khz. Can change as desired. */
+        ALC_FORMAT_TYPE_SOFT, ALC_SHORT_SOFT,
+        ALC_FORMAT_CHANNELS_SOFT, ALC_STEREO_SOFT,
+        ALC_FREQUENCY, 44100,
+
+        /* request default HRTF */
+        ALC_HRTF_SOFT, ALC_TRUE,
+        ALC_HRTF_ID_SOFT, 1,
+        AL_SOURCE_RELATIVE, ALC_TRUE,          // Define source distance as relative to listener.
+        AL_INVERSE_DISTANCE_CLAMPED, ALC_TRUE, // Use realistic attenuation model.
+
+        /* end-of-list */
+        0};
+    context = alcCreateContext(device, attrs);
+
+    alcMakeContextCurrent(context);
+
+    alcRenderSamplesSOFT = (LPALCRENDERSAMPLESSOFT)alcGetProcAddress(device, "alcRenderSamplesSOFT");
 
     if (!alcIsExtensionPresent(device, "ALC_EXT_EFX"))
     {
@@ -290,6 +304,7 @@ int AudioListener::InitAudioListener()
 
     num_sends = 0;
     alcGetIntegerv(device, ALC_MAX_AUXILIARY_SENDS, 1, &num_sends);
+
     if (alcGetError(device) != ALC_NO_ERROR || num_sends < 2)
     {
         fprintf(stderr, "Error: Device does not support multiple sends (got %d, need 2)\n",
@@ -340,13 +355,31 @@ int AudioListener::InitAudioListener()
     return 0;
 }
 
-void AudioListener::CreateAudioSource(ALuint* buffer, int index, Vector3 position){
+ALuint AudioListener::CreateAudioSource(ALuint *buffer, int index, Vector3 position)
+{
     source = 0;
     alGenSources(1, &source);
     alSourcei(source, AL_LOOPING, AL_TRUE);
     alSource3f(source, AL_POSITION, position.x, position.y, position.z);
     alSourcei(source, AL_DIRECT_FILTER, (ALint)direct_filter);
     alSourcei(source, AL_BUFFER, buffer[index]);
+    return source;
+}
+
+ALuint AudioListener::CopyBufferToSource(ALuint *buffer, int index, Vector3 position)
+{
+    source = 0;
+    alGenSources(1, &source);
+    alSourcei(source, AL_LOOPING, AL_TRUE);
+    alSource3f(source, AL_POSITION, position.x, position.y, position.z);
+    alSourcei(source, AL_DIRECT_FILTER, (ALint)direct_filter);
+    alSourcei(source, AL_BUFFER, buffer[index]);
+    return source;
+}
+
+void AudioListener::DestroyAudioSource()
+{
+    alDeleteSources()
 }
 
 int AudioListener::PlayAudio()
@@ -461,4 +494,37 @@ int AudioListener::PlayAudio()
     CloseAL();
     printf("Done!");
     return 0;
+}
+
+void AudioListener::StartListenerThread()
+{
+    if (!threadStarted)
+    {
+        alSourcePlay(source);
+        threadStarted = true;
+        thread = new std::thread(&AudioListener::UpdateListenerThread, this);
+        MyDebug::Log("ListenerThread Started!");
+    }
+}
+
+void AudioListener::UpdateListenerThread()
+{
+    while (threadStarted)
+    {
+        alcRenderSamplesSOFT(device, psamples, 1024);
+        // printf("samples: %d,%d,%d,%d\n",psamples[0],psamples[1],psamples[2],psamples[4]);
+        // alcProcessContext(context);
+        al_nssleep(10000000);
+        // alGetSourcei(source, AL_SOURCE_STATE, &state);
+    }
+}
+
+void AudioListener::StopListenerThread()
+{
+    if (threadStarted)
+    {
+        threadStarted = false;
+        thread->join();
+        MyDebug::Log("ListenerThread Stopped!");
+    }
 }

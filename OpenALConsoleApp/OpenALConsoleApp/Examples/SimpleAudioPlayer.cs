@@ -7,7 +7,6 @@ using Debug = AudioSpace.DummyUnityClasses.Debug;
 
 namespace OpenALConsoleApp.Examples
 {
-
     public class SimpleAudioPlayer
     {
         class UniquePtr<T> : IDisposable
@@ -60,21 +59,37 @@ namespace OpenALConsoleApp.Examples
 
         public void Start(string audiofilePath)
         {
+            AudioDevice audioDevice = new AudioDevice();
 
-            AudioListener audioListener = new AudioListener();
-            
+            AudioListener audioListener = new AudioListener(audioDevice.GetDevice());
+
             UniquePtr<byte> audiodataPtr;
             ReadAudioFile(audiofilePath, out audiodataPtr);
 
             AudioBuffer audioBuffer = new AudioBuffer(1);
-            int err = audioBuffer.CopyAudioToBuffer(0, audiodataPtr.ptr, audiodataPtr.length, 8000, AL_FORMAT.AL_FORMAT_MONO16);
-            
+            int err = audioBuffer.CopyAudioToBuffer(0, audiodataPtr.ptr, audiodataPtr.length, 8000,
+                AL_FORMAT.AL_FORMAT_MONO16);
+
             audioListener.CreateAudioSource(audioBuffer.GetBufferPtr(), 0, Vector3.One);
-            audioListener.PlayAudio();
+            //audioListener.PlayAudio();
+
+            audioListener.StartListenerThread();
+            Thread.Sleep(10000);
             Debug.Log("Playing....");
+            audioListener.StopListenerThread();
+
 
             audioBuffer.DestroyBuffer();
             audiodataPtr.Dispose();
+        }
+
+        public void TestThread()
+        {
+            AudioDevice audioDevice = new AudioDevice();
+            AudioListener audioListener = new AudioListener(audioDevice.GetDevice());
+            audioListener.StartListenerThread();
+            Thread.Sleep(2000);
+            audioListener.StopListenerThread();
         }
     }
 }

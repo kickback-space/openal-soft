@@ -17,12 +17,17 @@
 #include "AL/alc.h"
 #include "AL/efx.h"
 #include "AL/efx-presets.h"
+#include "AL/alext.h"
 
 #include "common/alhelpers.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
+
+#include <iostream>
+#include <thread>
+#include <chrono>
 
 #include "include/unity/IUnityInterface.h"
 #include "MyMath.h"

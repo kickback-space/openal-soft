@@ -6,6 +6,11 @@ struct Vector3;
 
 struct Vector3
 {
+    //const zero = 
+    Vector3(ALfloat _x, ALfloat _y, ALfloat _z)
+    :x(_x), y(_y), z(_z)
+    {}
+    
     ALfloat x, y, z;
 
     friend std::stringstream &operator<<(std::stringstream &in, const Vector3 other)
