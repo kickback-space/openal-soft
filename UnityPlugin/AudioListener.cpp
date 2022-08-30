@@ -366,21 +366,21 @@ ALuint AudioListener::CreateAudioSource(ALuint *buffer, int index, Vector3 posit
     return source;
 }
 
-ALuint AudioListener::CopyBufferToSource(ALuint *buffer, int index, Vector3 position)
-{
-    source = 0;
-    alGenSources(1, &source);
-    alSourcei(source, AL_LOOPING, AL_TRUE);
-    alSource3f(source, AL_POSITION, position.x, position.y, position.z);
-    alSourcei(source, AL_DIRECT_FILTER, (ALint)direct_filter);
-    alSourcei(source, AL_BUFFER, buffer[index]);
-    return source;
-}
+// ALuint AudioListener::CopyBufferToSource(ALuint *buffer, int index, Vector3 position)
+// {
+//     source = 0;
+//     alGenSources(1, &source);
+//     alSourcei(source, AL_LOOPING, AL_TRUE);
+//     alSource3f(source, AL_POSITION, position.x, position.y, position.z);
+//     alSourcei(source, AL_DIRECT_FILTER, (ALint)direct_filter);
+//     alSourcei(source, AL_BUFFER, buffer[index]);
+//     return source;
+// }
 
-void AudioListener::DestroyAudioSource()
-{
-    alDeleteSources()
-}
+// void AudioListener::DestroyAudioSource()
+// {
+//     // alDeleteSources()
+// }
 
 int AudioListener::PlayAudio()
 {
